@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'tu_clave_secreta_aqui_12345'  # Cambia esto por una clave segura
+app.secret_key = 'constructoradb483'  # Cambia esto por una clave segura
 
 def conectar():
     return mysql.connector.connect(
