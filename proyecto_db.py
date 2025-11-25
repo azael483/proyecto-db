@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'constructoradb483'  # Cambia esto por una clave segura
+app.secret_key = 'tu_clave_secreta_aqui_12345'  # Cambia esto por una clave segura
 
 def conectar():
     return mysql.connector.connect(
@@ -103,13 +103,35 @@ def proyecto_detalle(id):
     
     # Presupuesto usando el procedimiento almacenado
     presupuesto = None
-    cursor.callproc("PresupuestoProyecto", [id])
-    for result in cursor.stored_results():
-        presupuesto = result.fetchone()
+    try:
+        cursor.callproc("PresupuestoProyecto", [id])
+        for result in cursor.stored_results():
+            presupuesto = result.fetchone()
+    except:
+        pass
     
-    # Si no hay presupuesto, crear uno por defecto
+    # Si no hay presupuesto del procedimiento, calcularlo manualmente
     if presupuesto is None:
-        presupuesto = (proyecto['nombre'], proyecto['costo_estimado'], 0, 0, 0)
+        # Obtener costo de materiales
+        cursor.execute("""
+            SELECT COALESCE(SUM(pm.cantidad * m.costo_unitario), 0) as costo_materiales
+            FROM Proyectos_Materiales pm
+            JOIN Materiales m ON pm.id_material = m.id_material
+            WHERE pm.id_proyecto = %s
+        """, (id,))
+        costo_materiales = cursor.fetchone()['costo_materiales']
+        
+        # Obtener costo de empleados
+        cursor.execute("""
+            SELECT COALESCE(SUM(e.salario), 0) as costo_empleados
+            FROM Proyectos_Empleados pe
+            JOIN Empleados e ON pe.id_empleado = e.id_empleado
+            WHERE pe.id_proyecto = %s
+        """, (id,))
+        costo_empleados = cursor.fetchone()['costo_empleados']
+        
+        presupuesto_total = costo_materiales + costo_empleados
+        presupuesto = (proyecto['nombre'], proyecto['costo_estimado'], costo_materiales, costo_empleados, presupuesto_total)
     
     # Encargados del proyecto
     cursor.execute("""
@@ -175,7 +197,7 @@ def proyecto_materiales(id):
     
     # Materiales del proyecto
     cursor.execute("""
-        SELECT m.nombre as material, m.unidad, pm.cantidad,
+        SELECT m.id_material, m.nombre as material, m.unidad, pm.cantidad,
                m.costo_unitario, (pm.cantidad * m.costo_unitario) as costo_total,
                e.nombre as empleado_nombre, e.apellido as empleado_apellido
         FROM Proyectos_Materiales pm
@@ -318,6 +340,231 @@ def agregar_material(id):
                          materiales=materiales, 
                          empleados=empleados,
                          id_proyecto=id)
+
+# ===================== CREAR NUEVO EMPLEADO (Admin/Supervisor) =====================
+@app.route('/empleados/nuevo', methods=['GET', 'POST'])
+@login_required
+@rol_requerido('Admin', 'Supervisor')
+def nuevo_empleado():
+    conexion = conectar()
+    cursor = conexion.cursor(dictionary=True)
+    
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        apellido = request.form['apellido']
+        puesto = request.form['puesto']
+        salario = request.form['salario']
+        id_departamento = request.form['id_departamento']
+        
+        cursor.execute("""
+            INSERT INTO Empleados (nombre, apellido, puesto, salario, id_departamento)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (nombre, apellido, puesto, salario, id_departamento))
+        conexion.commit()
+        
+        # Obtener el ID del empleado recién creado
+        nuevo_id = cursor.lastrowid
+        
+        flash(f'Empleado {nombre} {apellido} creado exitosamente', 'success')
+        
+        # Si viene desde un proyecto, redirigir al agregar trabajador
+        redirect_to_project = request.form.get('redirect_to_project')
+        if redirect_to_project:
+            cursor.close()
+            conexion.close()
+            # Redirigir a agregar el empleado al proyecto
+            return redirect(url_for('agregar_trabajador', id=redirect_to_project, nuevo_empleado=nuevo_id))
+        
+        cursor.close()
+        conexion.close()
+        return redirect(url_for('lista_empleados'))
+    
+    # Obtener departamentos
+    cursor.execute("SELECT id_departamento, nombre FROM Departamentos")
+    departamentos = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+    
+    return render_template('nuevo_empleado.html', departamentos=departamentos)
+
+# ===================== CREAR NUEVO MATERIAL (Admin/Supervisor) =====================
+@app.route('/materiales/nuevo', methods=['GET', 'POST'])
+@login_required
+@rol_requerido('Admin', 'Supervisor')
+def nuevo_material():
+    conexion = conectar()
+    cursor = conexion.cursor(dictionary=True)
+    
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        unidad = request.form['unidad']
+        costo_unitario = request.form['costo_unitario']
+        
+        cursor.execute("""
+            INSERT INTO Materiales (nombre, unidad, costo_unitario)
+            VALUES (%s, %s, %s)
+        """, (nombre, unidad, costo_unitario))
+        conexion.commit()
+        
+        # Obtener el ID del material recién creado
+        nuevo_id = cursor.lastrowid
+        
+        flash(f'Material {nombre} creado exitosamente', 'success')
+        
+        # Si viene desde un proyecto, redirigir al agregar material
+        redirect_to_project = request.form.get('redirect_to_project')
+        if redirect_to_project:
+            cursor.close()
+            conexion.close()
+            return redirect(url_for('agregar_material', id=redirect_to_project, nuevo_material=nuevo_id))
+        
+        cursor.close()
+        conexion.close()
+        return redirect(url_for('lista_materiales'))
+    
+    cursor.close()
+    conexion.close()
+    return render_template('nuevo_material.html')
+
+# ===================== LISTA DE EMPLEADOS =====================
+@app.route('/empleados')
+@login_required
+def lista_empleados():
+    conexion = conectar()
+    cursor = conexion.cursor(dictionary=True)
+    
+    cursor.execute("""
+        SELECT e.*, d.nombre as departamento_nombre
+        FROM Empleados e
+        LEFT JOIN Departamentos d ON e.id_departamento = d.id_departamento
+        ORDER BY e.nombre
+    """)
+    empleados = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+    
+    return render_template('lista_empleados.html', empleados=empleados)
+
+# ===================== LISTA DE MATERIALES =====================
+@app.route('/materiales')
+@login_required
+def lista_materiales():
+    conexion = conectar()
+    cursor = conexion.cursor(dictionary=True)
+    
+    cursor.execute("SELECT * FROM Materiales ORDER BY nombre")
+    materiales = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+    
+    return render_template('lista_materiales.html', materiales=materiales)
+
+# ===================== EDITAR EMPLEADO (Admin/Supervisor) =====================
+@app.route('/empleados/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+@rol_requerido('Admin', 'Supervisor')
+def editar_empleado(id):
+    conexion = conectar()
+    cursor = conexion.cursor(dictionary=True)
+    
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        apellido = request.form['apellido']
+        puesto = request.form['puesto']
+        salario = request.form['salario']
+        id_departamento = request.form['id_departamento']
+        
+        cursor.execute("""
+            UPDATE Empleados 
+            SET nombre=%s, apellido=%s, puesto=%s, salario=%s, id_departamento=%s
+            WHERE id_empleado=%s
+        """, (nombre, apellido, puesto, salario, id_departamento, id))
+        conexion.commit()
+        
+        flash('Empleado actualizado correctamente', 'success')
+        cursor.close()
+        conexion.close()
+        return redirect(url_for('lista_empleados'))
+    
+    cursor.execute("SELECT * FROM Empleados WHERE id_empleado = %s", (id,))
+    empleado = cursor.fetchone()
+    
+    cursor.execute("SELECT id_departamento, nombre FROM Departamentos")
+    departamentos = cursor.fetchall()
+    
+    cursor.close()
+    conexion.close()
+    return render_template('editar_empleado.html', empleado=empleado, departamentos=departamentos)
+
+# ===================== EDITAR MATERIAL (Admin/Supervisor) =====================
+@app.route('/materiales/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+@rol_requerido('Admin', 'Supervisor')
+def editar_material(id):
+    conexion = conectar()
+    cursor = conexion.cursor(dictionary=True)
+    
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        unidad = request.form['unidad']
+        costo_unitario = request.form['costo_unitario']
+        
+        cursor.execute("""
+            UPDATE Materiales 
+            SET nombre=%s, unidad=%s, costo_unitario=%s
+            WHERE id_material=%s
+        """, (nombre, unidad, costo_unitario, id))
+        conexion.commit()
+        
+        flash('Material actualizado correctamente', 'success')
+        cursor.close()
+        conexion.close()
+        return redirect(url_for('lista_materiales'))
+    
+    cursor.execute("SELECT * FROM Materiales WHERE id_material = %s", (id,))
+    material = cursor.fetchone()
+    cursor.close()
+    conexion.close()
+    
+    return render_template('editar_material.html', material=material)
+
+# ===================== ELIMINAR TRABAJADOR DEL PROYECTO (Admin/Supervisor) =====================
+@app.route('/proyecto/<int:id_proyecto>/trabajador/<int:id_empleado>/eliminar', methods=['POST'])
+@login_required
+@rol_requerido('Admin', 'Supervisor')
+def eliminar_trabajador_proyecto(id_proyecto, id_empleado):
+    conexion = conectar()
+    cursor = conexion.cursor()
+    
+    cursor.execute("""
+        DELETE FROM Proyectos_Empleados 
+        WHERE id_proyecto=%s AND id_empleado=%s
+    """, (id_proyecto, id_empleado))
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+    
+    flash('Trabajador eliminado del proyecto', 'success')
+    return redirect(url_for('proyecto_trabajadores', id=id_proyecto))
+
+# ===================== ELIMINAR MATERIAL DEL PROYECTO (Admin/Supervisor) =====================
+@app.route('/proyecto/<int:id_proyecto>/material/<int:id_material>/eliminar', methods=['POST'])
+@login_required
+@rol_requerido('Admin', 'Supervisor')
+def eliminar_material_proyecto(id_proyecto, id_material):
+    conexion = conectar()
+    cursor = conexion.cursor()
+    
+    cursor.execute("""
+        DELETE FROM Proyectos_Materiales 
+        WHERE id_proyecto=%s AND id_material=%s
+    """, (id_proyecto, id_material))
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+    
+    flash('Material eliminado del proyecto', 'success')
+    return redirect(url_for('proyecto_materiales', id=id_proyecto))
 
 if __name__ == "__main__":
     app.run(debug=True)

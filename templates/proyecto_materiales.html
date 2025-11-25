@@ -124,6 +124,20 @@
             background-color: #f8f9fa;
         }
 
+        .btn-delete {
+            padding: 6px 12px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+            .btn-delete:hover {
+                background-color: #c82333;
+            }
+
         .alert {
             padding: 15px;
             border-radius: 5px;
@@ -185,6 +199,9 @@
                         <th>Costo Unitario</th>
                         <th>Costo Total</th>
                         <th>Retirado Por</th>
+                        {% if session.rol in ['Admin', 'Supervisor'] %}
+                        <th>Acciones</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -202,6 +219,13 @@
                             -
                             {% endif %}
                         </td>
+                        {% if session.rol in ['Admin', 'Supervisor'] %}
+                        <td>
+                            <form method="POST" action="{{ url_for('eliminar_material_proyecto', id_proyecto=id_proyecto, id_material=material.id_material) }}" style="display: inline;" onsubmit="return confirm('¿Estás seguro de eliminar este material del proyecto?')">
+                                <button type="submit" class="btn-delete">🗑️ Eliminar</button>
+                            </form>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

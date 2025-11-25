@@ -28,6 +28,25 @@
                 font-size: 24px;
             }
 
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+            .nav-links a {
+                color: white;
+                text-decoration: none;
+                padding: 8px 15px;
+                background-color: rgba(255,255,255,0.2);
+                border-radius: 5px;
+                transition: background-color 0.3s;
+            }
+
+                .nav-links a:hover {
+                    background-color: rgba(255,255,255,0.3);
+                }
+
         .user-info {
             display: flex;
             align-items: center;
@@ -165,10 +184,14 @@
 <body>
     <div class="navbar">
         <h1>🏗️ Sistema Constructora</h1>
-        <div class="user-info">
-            <span>{{ session.nombre_completo }}</span>
-            <span class="badge">{{ session.rol }}</span>
-            <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar Sesión</a>
+        <div class="nav-links">
+            <a href="{{ url_for('lista_empleados') }}">👷 Empleados</a>
+            <a href="{{ url_for('lista_materiales') }}">🧱 Materiales</a>
+            <div class="user-info">
+                <span>{{ session.nombre_completo }}</span>
+                <span class="badge">{{ session.rol }}</span>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar Sesión</a>
+            </div>
         </div>
     </div>
 

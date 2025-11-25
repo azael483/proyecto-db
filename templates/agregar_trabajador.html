@@ -37,21 +37,57 @@
             }
 
         .container {
-            max-width: 700px;
+            max-width: 800px;
             margin: 30px auto;
             padding: 0 20px;
         }
 
-        .form-card {
+        .card {
             background: white;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-            .form-card h2 {
+            .card h2 {
                 color: #333;
                 margin-bottom: 25px;
+            }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+            .tab.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+            }
+
+            .tab:hover {
+                color: #667eea;
+            }
+
+        .tab-content {
+            display: none;
+        }
+
+            .tab-content.active {
+                display: block;
             }
 
         .form-group {
@@ -65,7 +101,7 @@
             font-weight: 500;
         }
 
-        select, input {
+        input, select {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -74,7 +110,7 @@
             transition: border 0.3s;
         }
 
-            select:focus, input:focus {
+            input:focus, select:focus {
                 outline: none;
                 border-color: #667eea;
             }
@@ -85,7 +121,7 @@
             margin-top: 25px;
         }
 
-        button {
+        button, .btn {
             flex: 1;
             padding: 12px;
             border: none;
@@ -94,6 +130,9 @@
             cursor: pointer;
             font-weight: 500;
             transition: transform 0.2s;
+            text-align: center;
+            text-decoration: none;
+            display: block;
         }
 
         .btn-primary {
@@ -101,7 +140,12 @@
             color: white;
         }
 
-        button:hover {
+        .btn-cancel {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        button:hover, .btn:hover {
             transform: translateY(-2px);
         }
     </style>
@@ -113,35 +157,106 @@
     </div>
 
     <div class="container">
-        <div class="form-card">
+        <div class="card">
             <h2>➕ Agregar Trabajador al Proyecto</h2>
 
-            <form method="POST">
-                <div class="form-group">
-                    <label>Seleccionar Empleado</label>
-                    <select name="id_empleado" required>
-                        <option value="">-- Selecciona un empleado --</option>
-                        {% for empleado in empleados %}
-                        <option value="{{ empleado.id_empleado }}">
-                            {{ empleado.nombre }} {{ empleado.apellido }} - {{ empleado.puesto }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('existing')">📋 Asignar Existente</button>
+                <button class="tab" onclick="showTab('new')">➕ Crear Nuevo</button>
+            </div>
 
-                <div class="form-group">
-                    <label>Rol en el Proyecto</label>
-                    <input type="text" name="rol" placeholder="Ej: Ingeniero Residente, Supervisor, etc." required>
-                </div>
+            <!-- Tab 1: Asignar Existente -->
+            <div id="existing-tab" class="tab-content active">
+                <form method="POST">
+                    <div class="form-group">
+                        <label>Seleccionar Empleado</label>
+                        <select name="id_empleado" required>
+                            <option value="">-- Selecciona un empleado --</option>
+                            {% for empleado in empleados %}
+                            <option value="{{ empleado.id_empleado }}" {% if request.args.get('nuevo_empleado')|string= =empleado.id_empleado|string %}selected{% endif %}>
+                                {{ empleado.nombre }} {{ empleado.apellido }} - {{ empleado.puesto }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <div class="btn-group">
-                    <button type="submit" class="btn-primary">✅ Agregar Trabajador</button>
-                    <a href="{{ url_for('proyecto_trabajadores', id=id_proyecto) }}" style="flex: 1; padding: 12px; background-color: #6c757d; color: white; text-align: center; text-decoration: none; border-radius: 5px; font-weight: 500;">
-                        ❌ Cancelar
-                    </a>
-                </div>
-            </form>
+                    <div class="form-group">
+                        <label>Rol en el Proyecto</label>
+                        <input type="text" name="rol" placeholder="Ej: Ingeniero Residente, Supervisor, etc." required>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn-primary">✅ Agregar Trabajador</button>
+                        <a href="{{ url_for('proyecto_trabajadores', id=id_proyecto) }}" class="btn btn-cancel">❌ Cancelar</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 2: Crear Nuevo -->
+            <div id="new-tab" class="tab-content">
+                <form action="{{ url_for('nuevo_empleado') }}" method="POST">
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" name="nombre" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Apellido</label>
+                        <input type="text" name="apellido" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Puesto</label>
+                        <input type="text" name="puesto" placeholder="Ej: Ingeniero Civil, Arquitecto, etc." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Salario Mensual</label>
+                        <input type="number" step="0.01" name="salario" placeholder="0.00" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Departamento</label>
+                        <select name="id_departamento" required>
+                            <option value="">-- Selecciona un departamento --</option>
+                            <option value="1">Ingeniería</option>
+                            <option value="2">Administración</option>
+                            <option value="3">Construcción</option>
+                            <option value="4">Diseño</option>
+                            <option value="5">Supervisión</option>
+                        </select>
+                    </div>
+
+                    <input type="hidden" name="redirect_to_project" value="{{ id_proyecto }}">
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn-primary">✅ Crear y Asignar Empleado</button>
+                        <a href="{{ url_for('proyecto_trabajadores', id=id_proyecto) }}" class="btn btn-cancel">❌ Cancelar</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+
+    <script>
+        function showTab(tabName) {
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Mostrar el tab seleccionado
+            if (tabName === 'existing') {
+                document.getElementById('existing-tab').classList.add('active');
+                document.querySelectorAll('.tab')[0].classList.add('active');
+            } else {
+                document.getElementById('new-tab').classList.add('active');
+                document.querySelectorAll('.tab')[1].classList.add('active');
+            }
+        }
+    </script>
 </body>
 </html>

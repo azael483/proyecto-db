@@ -37,21 +37,57 @@
             }
 
         .container {
-            max-width: 700px;
+            max-width: 800px;
             margin: 30px auto;
             padding: 0 20px;
         }
 
-        .form-card {
+        .card {
             background: white;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-            .form-card h2 {
+            .card h2 {
                 color: #333;
                 margin-bottom: 25px;
+            }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+            .tab.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+            }
+
+            .tab:hover {
+                color: #667eea;
+            }
+
+        .tab-content {
+            display: none;
+        }
+
+            .tab-content.active {
+                display: block;
             }
 
         .form-group {
@@ -65,7 +101,7 @@
             font-weight: 500;
         }
 
-        select, input {
+        input, select {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -74,7 +110,7 @@
             transition: border 0.3s;
         }
 
-            select:focus, input:focus {
+            input:focus, select:focus {
                 outline: none;
                 border-color: #667eea;
             }
@@ -98,7 +134,7 @@
             margin-top: 25px;
         }
 
-        button {
+        button, .btn {
             flex: 1;
             padding: 12px;
             border: none;
@@ -107,6 +143,9 @@
             cursor: pointer;
             font-weight: 500;
             transition: transform 0.2s;
+            text-align: center;
+            text-decoration: none;
+            display: block;
         }
 
         .btn-primary {
@@ -114,8 +153,17 @@
             color: white;
         }
 
-        button:hover {
+        .btn-cancel {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        button:hover, .btn:hover {
             transform: translateY(-2px);
+        }
+
+        #costo_preview {
+            display: none;
         }
     </style>
 </head>
@@ -126,58 +174,111 @@
     </div>
 
     <div class="container">
-        <div class="form-card">
+        <div class="card">
             <h2>🧱 Agregar Material al Proyecto</h2>
 
-            <div class="info-box">
-                <p>📌 Registra el material utilizado, la cantidad retirada y el empleado responsable del retiro.</p>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('existing')">📋 Asignar Existente</button>
+                <button class="tab" onclick="showTab('new')">➕ Crear Nuevo</button>
             </div>
 
-            <form method="POST">
-                <div class="form-group">
-                    <label>Material</label>
-                    <select name="id_material" id="material_select" required>
-                        <option value="">-- Selecciona un material --</option>
-                        {% for material in materiales %}
-                        <option value="{{ material.id_material }}" data-costo="{{ material.costo_unitario }}" data-unidad="{{ material.unidad }}">
-                            {{ material.nombre }} - ${{ "{:,.2f}".format(material.costo_unitario) }} / {{ material.unidad }}
-                        </option>
-                        {% endfor %}
-                    </select>
+            <!-- Tab 1: Asignar Existente -->
+            <div id="existing-tab" class="tab-content active">
+                <div class="info-box">
+                    <p>📌 Registra el material utilizado, la cantidad retirada y el empleado responsable del retiro.</p>
                 </div>
 
-                <div class="form-group">
-                    <label>Cantidad</label>
-                    <input type="number" step="0.01" name="cantidad" id="cantidad_input" placeholder="0.00" required>
-                </div>
+                <form method="POST">
+                    <div class="form-group">
+                        <label>Material</label>
+                        <select name="id_material" id="material_select" required>
+                            <option value="">-- Selecciona un material --</option>
+                            {% for material in materiales %}
+                            <option value="{{ material.id_material }}" data-costo="{{ material.costo_unitario }}" data-unidad="{{ material.unidad }}" {% if request.args.get('nuevo_material')|string= =material.id_material|string %}selected{% endif %}>
+                                {{ material.nombre }} - ${{ "{:,.2f}".format(material.costo_unitario) }} / {{ material.unidad }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label>Empleado Responsable del Retiro</label>
-                    <select name="id_empleado_responsable" required>
-                        <option value="">-- Selecciona el responsable --</option>
-                        {% for empleado in empleados %}
-                        <option value="{{ empleado.id_empleado }}">
-                            {{ empleado.nombre }} {{ empleado.apellido }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+                    <div class="form-group">
+                        <label>Cantidad</label>
+                        <input type="number" step="0.01" name="cantidad" id="cantidad_input" placeholder="0.00" required>
+                    </div>
 
-                <div class="info-box" id="costo_preview" style="display: none;">
-                    <p><strong>Costo Estimado:</strong> $<span id="costo_calculado">0.00</span></p>
-                </div>
+                    <div class="form-group">
+                        <label>Empleado Responsable del Retiro</label>
+                        <select name="id_empleado_responsable" required>
+                            <option value="">-- Selecciona el responsable --</option>
+                            {% for empleado in empleados %}
+                            <option value="{{ empleado.id_empleado }}">
+                                {{ empleado.nombre }} {{ empleado.apellido }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <div class="btn-group">
-                    <button type="submit" class="btn-primary">✅ Agregar Material</button>
-                    <a href="{{ url_for('proyecto_materiales', id=id_proyecto) }}" style="flex: 1; padding: 12px; background-color: #6c757d; color: white; text-align: center; text-decoration: none; border-radius: 5px; font-weight: 500;">
-                        ❌ Cancelar
-                    </a>
-                </div>
-            </form>
+                    <div class="info-box" id="costo_preview">
+                        <p><strong>Costo Estimado:</strong> $<span id="costo_calculado">0.00</span></p>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn-primary">✅ Agregar Material</button>
+                        <a href="{{ url_for('proyecto_materiales', id=id_proyecto) }}" class="btn btn-cancel">❌ Cancelar</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 2: Crear Nuevo -->
+            <div id="new-tab" class="tab-content">
+                <form action="{{ url_for('nuevo_material') }}" method="POST">
+                    <div class="form-group">
+                        <label>Nombre del Material</label>
+                        <input type="text" name="nombre" placeholder="Ej: Cemento, Arena, Varilla, etc." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Unidad de Medida</label>
+                        <input type="text" name="unidad" placeholder="Ej: m3, kg, pieza, metro, saco, etc." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Costo Unitario</label>
+                        <input type="number" step="0.01" name="costo_unitario" placeholder="0.00" required>
+                    </div>
+
+                    <input type="hidden" name="redirect_to_project" value="{{ id_proyecto }}">
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn-primary">✅ Crear y Asignar Material</button>
+                        <a href="{{ url_for('proyecto_materiales', id=id_proyecto) }}" class="btn btn-cancel">❌ Cancelar</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
+        function showTab(tabName) {
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Mostrar el tab seleccionado
+            if (tabName === 'existing') {
+                document.getElementById('existing-tab').classList.add('active');
+                document.querySelectorAll('.tab')[0].classList.add('active');
+            } else {
+                document.getElementById('new-tab').classList.add('active');
+                document.querySelectorAll('.tab')[1].classList.add('active');
+            }
+        }
+
+        // Calcular costo automáticamente
         const materialSelect = document.getElementById('material_select');
         const cantidadInput = document.getElementById('cantidad_input');
         const costoPreview = document.getElementById('costo_preview');
