@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Proyectos - Sistema Constructora</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .navbar h1 {
+                font-size: 24px;
+            }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .badge {
+            background-color: rgba(255,255,255,0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+            .logout-btn:hover {
+                background-color: rgba(255,255,255,0.3);
+            }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .proyectos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .proyecto-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-left: 5px solid #667eea;
+        }
+
+            .proyecto-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            }
+
+        .proyecto-titulo {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .proyecto-info {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .estado {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+            .estado.completado {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            .estado.enconstruccion {
+                background-color: #d1ecf1;
+                color: #0c5460;
+            }
+
+            .estado.pausado {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
+
+            .estado.cancelado {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
+
+        .ver-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: transform 0.2s;
+        }
+
+            .ver-btn:hover {
+                transform: scale(1.05);
+            }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>🏗️ Sistema Constructora</h1>
+        <div class="user-info">
+            <span>{{ session.nombre_completo }}</span>
+            <span class="badge">{{ session.rol }}</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar Sesión</a>
+        </div>
+    </div>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <h2>📋 Proyectos Activos</h2>
+
+        <div class="proyectos-grid">
+            {% for proyecto in proyectos %}
+            <div class="proyecto-card">
+                <div class="proyecto-titulo">{{ proyecto.nombre }}</div>
+                <div class="proyecto-info">
+                    📍 {{ proyecto.ubicacion }}<br>
+                    🆔 Proyecto #{{ proyecto.id_proyecto }}
+                </div>
+                <span class="estado {{ proyecto.estado.lower().replace(' ', '') }}">
+                    {{ proyecto.estado }}
+                </span>
+                <br>
+                <a href="{{ url_for('proyecto_detalle', id=proyecto.id_proyecto) }}" class="ver-btn">
+                    Ver Detalles →
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
