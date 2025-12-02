@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'tu_clave_secreta_aqui_12345'  # Cambia esto por una clave segura
+app.secret_key = 'Constructora483'  
 
 def conectar():
     return mysql.connector.connect(
@@ -90,6 +90,11 @@ def index():
 def nuevo_proyecto():
     conexion = conectar()
     cursor = conexion.cursor(dictionary=True)
+
+    if session.get('rol') != 'Admin':
+        flash("No tienes permisos para crear proyectos.", "danger")
+        return redirect(url_for('index'))
+
 
     if request.method == 'POST':
         nombre = request.form['nombre']
