@@ -173,7 +173,7 @@
                         <select name="id_empleado" required>
                             <option value="">-- Selecciona un empleado --</option>
                             {% for empleado in empleados %}
-                            <option value="{{ empleado.id_empleado }}" {% if request.args.get('nuevo_empleado')|string= =empleado.id_empleado|string %}selected{% endif %}>
+                            <option value="{{ empleado.id_empleado }}">
                                 {{ empleado.nombre }} {{ empleado.apellido }} - {{ empleado.puesto }}
                             </option>
                             {% endfor %}

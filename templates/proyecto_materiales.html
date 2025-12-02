@@ -221,7 +221,7 @@
                         </td>
                         {% if session.rol in ['Admin', 'Supervisor'] %}
                         <td>
-                            <form method="POST" action="{{ url_for('eliminar_material_proyecto', id_proyecto=id_proyecto, id_material=material.id_material) }}" style="display: inline;" onsubmit="return confirm('¿Estás seguro de eliminar este material del proyecto?')">
+                            <form method="POST" action="{{ url_for('eliminar_material_proyecto', id_proyecto=id_proyecto, id_registro=material.id_registro) }}" style="display: inline;" onsubmit="return confirm('¿Estás seguro de eliminar este registro de material?')">
                                 <button type="submit" class="btn-delete">🗑️ Eliminar</button>
                             </form>
                         </td>

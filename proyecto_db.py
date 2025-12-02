@@ -197,7 +197,7 @@ def proyecto_materiales(id):
     
     # Materiales del proyecto
     cursor.execute("""
-        SELECT m.id_material, m.nombre as material, m.unidad, pm.cantidad,
+        SELECT pm.id_registro, m.id_material, m.nombre as material, m.unidad, pm.cantidad,
                m.costo_unitario, (pm.cantidad * m.costo_unitario) as costo_total,
                e.nombre as empleado_nombre, e.apellido as empleado_apellido
         FROM Proyectos_Materiales pm
@@ -313,14 +313,39 @@ def agregar_material(id):
         id_empleado_responsable = request.form['id_empleado_responsable']
         
         try:
+            # Verificar si ya existe este material con el mismo encargado
             cursor.execute("""
-                INSERT INTO Proyectos_Materiales (id_proyecto, id_material, cantidad, id_empleado_responsable)
-                VALUES (%s, %s, %s, %s)
-            """, (id, id_material, cantidad, id_empleado_responsable))
-            conexion.commit()
-            flash('Material agregado al proyecto', 'success')
-        except:
-            flash('Error: El material ya existe en el proyecto', 'danger')
+                SELECT cantidad, id_registro 
+                FROM Proyectos_Materiales 
+                WHERE id_proyecto=%s AND id_material=%s AND id_empleado_responsable=%s
+            """, (id, id_material, id_empleado_responsable))
+            
+            material_existente = cursor.fetchone()
+            
+            if material_existente:
+                # Si existe con el mismo encargado, sumar la cantidad
+                cantidad_existente = float(material_existente['cantidad'])
+                cantidad_nueva = float(cantidad)
+                nueva_cantidad = cantidad_existente + cantidad_nueva
+                
+                cursor.execute("""
+                    UPDATE Proyectos_Materiales 
+                    SET cantidad = %s
+                    WHERE id_registro = %s
+                """, (nueva_cantidad, material_existente['id_registro']))
+                conexion.commit()
+                flash(f'Cantidad actualizada: {cantidad_existente} + {cantidad_nueva} = {nueva_cantidad}', 'success')
+            else:
+                # Si no existe o tiene diferente encargado, crear nuevo registro
+                cursor.execute("""
+                    INSERT INTO Proyectos_Materiales (id_proyecto, id_material, cantidad, id_empleado_responsable)
+                    VALUES (%s, %s, %s, %s)
+                """, (id, id_material, cantidad, id_empleado_responsable))
+                conexion.commit()
+                flash('Material agregado al proyecto', 'success')
+                
+        except Exception as e:
+            flash(f'Error al agregar material: {str(e)}', 'danger')
         
         cursor.close()
         conexion.close()
@@ -548,17 +573,17 @@ def eliminar_trabajador_proyecto(id_proyecto, id_empleado):
     return redirect(url_for('proyecto_trabajadores', id=id_proyecto))
 
 # ===================== ELIMINAR MATERIAL DEL PROYECTO (Admin/Supervisor) =====================
-@app.route('/proyecto/<int:id_proyecto>/material/<int:id_material>/eliminar', methods=['POST'])
+@app.route('/proyecto/<int:id_proyecto>/material/<int:id_registro>/eliminar', methods=['POST'])
 @login_required
 @rol_requerido('Admin', 'Supervisor')
-def eliminar_material_proyecto(id_proyecto, id_material):
+def eliminar_material_proyecto(id_proyecto, id_registro):
     conexion = conectar()
     cursor = conexion.cursor()
     
     cursor.execute("""
         DELETE FROM Proyectos_Materiales 
-        WHERE id_proyecto=%s AND id_material=%s
-    """, (id_proyecto, id_material))
+        WHERE id_registro=%s
+    """, (id_registro,))
     conexion.commit()
     cursor.close()
     conexion.close()

@@ -194,7 +194,7 @@
                         <select name="id_material" id="material_select" required>
                             <option value="">-- Selecciona un material --</option>
                             {% for material in materiales %}
-                            <option value="{{ material.id_material }}" data-costo="{{ material.costo_unitario }}" data-unidad="{{ material.unidad }}" {% if request.args.get('nuevo_material')|string= =material.id_material|string %}selected{% endif %}>
+                            <option value="{{ material.id_material }}" data-costo="{{ material.costo_unitario }}" data-unidad="{{ material.unidad }}">
                                 {{ material.nombre }} - ${{ "{:,.2f}".format(material.costo_unitario) }} / {{ material.unidad }}
                             </option>
                             {% endfor %}
