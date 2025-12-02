@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Editar Empleado</title>
+    <title>Nuevo Proyecto</title>
     <style>
         * {
             margin: 0;
@@ -37,7 +37,7 @@
             }
 
         .container {
-            max-width: 700px;
+            max-width: 800px;
             margin: 30px auto;
             padding: 0 20px;
         }
@@ -54,9 +54,19 @@
                 margin-bottom: 25px;
             }
 
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
+
+            .form-group.full-width {
+                grid-column: 1 / -1;
+            }
 
         label {
             display: block;
@@ -97,7 +107,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #28a745;
             color: white;
         }
 
@@ -109,48 +119,61 @@
 <body>
     <div class="navbar">
         <h1>🏗️ Sistema Constructora</h1>
-        <a href="{{ url_for('lista_empleados') }}">← Volver</a>
+        <a href="{{ url_for('index') }}">← Volver a Proyectos</a>
     </div>
 
     <div class="container">
         <div class="form-card">
-            <h2>✏️ Editar Empleado</h2>
+            <h2>➕ Crear Nuevo Proyecto</h2>
 
             <form method="POST">
-                <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" name="nombre" value="{{ empleado.nombre }}" required>
+                <div class="form-group full-width">
+                    <label>Nombre del Proyecto *</label>
+                    <input type="text" name="nombre" placeholder="Ej: Residencial Las Flores" required>
                 </div>
 
-                <div class="form-group">
-                    <label>Apellido</label>
-                    <input type="text" name="apellido" value="{{ empleado.apellido }}" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ubicación *</label>
+                        <input type="text" name="ubicacion" placeholder="Ej: Monterrey, NL" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cliente *</label>
+                        <input type="text" name="cliente_nombre" placeholder="Ej: Juan Pérez" required>
+                    </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha de Inicio  *</label>
+                        <input type="date" name="fecha_inicio" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha Estimada de Fin *</label>
+                        <input type="date" name="fecha_fin" required>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Puesto</label>
-                    <input type="text" name="puesto" value="{{ empleado.puesto }}" required>
-                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Presupuesto Estimado *</label>
+                        <input type="number" step="0.01" name="costo_estimado" placeholder="0.00" required>
+                    </div>
 
-                <div class="form-group">
-                    <label>Salario Mensual</label>
-                    <input type="number" step="0.01" name="salario" value="{{ empleado.salario }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Departamento</label>
-                    <select name="id_departamento" required>
-                        {% for depto in departamentos %}
-                        <option value="{{ depto.id_departamento }}" {% if depto.id_departamento == empleado.id_departamento %}selected{% endif %}>
-                            {{ depto.nombre }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <div class="form-group">
+                        <label>Estado Inicial *</label>
+                        <select name="id_estado" required>
+                            {% for estado in estados %}
+                            <option value="{{ estado.id_estado }}">{{ estado.estado }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
                 <div class="btn-group">
-                    <button type="submit" class="btn-primary">💾 Guardar Cambios</button>
-                    <a href="{{ url_for('lista_empleados') }}" style="flex: 1; padding: 12px; background-color: #6c757d; color: white; text-align: center; text-decoration: none; border-radius: 5px; font-weight: 500;">
+                    <button type="submit" class="btn-primary">✅ Crear Proyecto</button>
+                    <a href="{{ url_for('index') }}" style="flex: 1; padding: 12px; background-color: #6c757d; color: white; text-align: center; text-decoration: none; border-radius: 5px; font-weight: 500;">
                         ❌ Cancelar
                     </a>
                 </div>

@@ -84,13 +84,53 @@ def index():
     conexion.close()
     return render_template('index.html', proyectos=proyectos)
 
+# ===================== NUEVO PROYECTO =====================
+@app.route('/proyectos/nuevo', methods=['GET', 'POST'])
+@login_required
+def nuevo_proyecto():
+    conexion = conectar()
+    cursor = conexion.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        ubicacion = request.form['ubicacion']
+        id_cliente = request.form['id_cliente']
+        fecha_inicio = request.form['fecha_inicio']
+        fecha_fin = request.form['fecha_fin']
+        costo_estimado = request.form['costo_estimado']
+        id_estado = request.form['id_estado']
+
+        cursor.execute("""
+            INSERT INTO Proyectos (nombre, ubicacion, fecha_inicio, fecha_fin, costo_estimado, id_cliente, id_estado)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (nombre, ubicacion, fecha_inicio, fecha_fin, costo_estimado, id_cliente, id_estado))
+
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+
+        flash('✅ Proyecto creado exitosamente', 'success')
+        return redirect(url_for('index'))
+
+    # Si es GET, cargamos clientes y estados para el formulario
+    cursor.execute("SELECT id_cliente, nombre, apellido FROM Clientes ORDER BY nombre")
+    clientes = cursor.fetchall()
+
+    cursor.execute("SELECT id_estado, estado FROM Estados ORDER BY estado")
+    estados = cursor.fetchall()
+
+    cursor.close()
+    conexion.close()
+
+    return render_template('nuevo_proyecto.html', clientes=clientes, estados=estados)
+
 # ===================== DETALLE DEL PROYECTO =====================
 @app.route('/proyecto/<int:id>')
 @login_required
 def proyecto_detalle(id):
     conexion = conectar()
     cursor = conexion.cursor(dictionary=True)
-    
+
     # Datos generales del proyecto
     cursor.execute("""
         SELECT p.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, e.estado
@@ -100,19 +140,20 @@ def proyecto_detalle(id):
         WHERE p.id_proyecto = %s
     """, (id,))
     proyecto = cursor.fetchone()
-    
+
     # Presupuesto usando el procedimiento almacenado
     presupuesto = None
     try:
-        cursor.callproc("PresupuestoProyecto", [id])
-        for result in cursor.stored_results():
+        proc_cursor = conexion.cursor(dictionary=True)
+        proc_cursor.callproc("PresupuestoProyecto", [id])
+        for result in proc_cursor.stored_results():
             presupuesto = result.fetchone()
-    except:
-        pass
-    
+        proc_cursor.close()
+    except Exception as e:
+        print(f"Error al ejecutar procedimiento: {e}")
+
     # Si no hay presupuesto del procedimiento, calcularlo manualmente
     if presupuesto is None:
-        # Obtener costo de materiales
         cursor.execute("""
             SELECT COALESCE(SUM(pm.cantidad * m.costo_unitario), 0) as costo_materiales
             FROM Proyectos_Materiales pm
@@ -120,8 +161,7 @@ def proyecto_detalle(id):
             WHERE pm.id_proyecto = %s
         """, (id,))
         costo_materiales = cursor.fetchone()['costo_materiales']
-        
-        # Obtener costo de empleados
+
         cursor.execute("""
             SELECT COALESCE(SUM(e.salario), 0) as costo_empleados
             FROM Proyectos_Empleados pe
@@ -129,10 +169,10 @@ def proyecto_detalle(id):
             WHERE pe.id_proyecto = %s
         """, (id,))
         costo_empleados = cursor.fetchone()['costo_empleados']
-        
+
         presupuesto_total = costo_materiales + costo_empleados
         presupuesto = (proyecto['nombre'], proyecto['costo_estimado'], costo_materiales, costo_empleados, presupuesto_total)
-    
+
     # Encargados del proyecto
     cursor.execute("""
         SELECT e.nombre, e.apellido, e.puesto, pe.rol
@@ -141,14 +181,14 @@ def proyecto_detalle(id):
         WHERE pe.id_proyecto = %s
     """, (id,))
     encargados = cursor.fetchall()
-    
+
     cursor.close()
     conexion.close()
-    
-    return render_template('proyecto_detalle.html', 
-                         proyecto=proyecto, 
-                         presupuesto=presupuesto,
-                         encargados=encargados)
+
+    return render_template('proyecto_detalle.html',
+                           proyecto=proyecto,
+                           presupuesto=presupuesto,
+                           encargados=encargados)
 
 # ===================== TRABAJADORES DEL PROYECTO =====================
 @app.route('/proyecto/<int:id>/trabajadores')
@@ -263,7 +303,7 @@ def editar_proyecto(id):
     cursor.close()
     conexion.close()
     
-    return render_template('editar_proyecto.html', proyecto=proyecto, estados=estados)
+    return render_template('editar_proyecto_nuevo.html', proyecto=proyecto, estados=estados)
 
 # ===================== AGREGAR TRABAJADOR (Admin/Supervisor) =====================
 @app.route('/proyecto/<int:id>/agregar_trabajador', methods=['GET', 'POST'])

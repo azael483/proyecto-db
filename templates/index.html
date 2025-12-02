@@ -204,7 +204,14 @@
         {% endif %}
         {% endwith %}
 
-        <h2>📋 Proyectos Activos</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h2>📋 Proyectos Activos</h2>
+            {% if session.rol in ['Admin', 'Supervisor'] %}
+            <a href="/proyectos/nuevo" style="padding: 12px 25px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; font-weight: 500;">
+                ➕ Nuevo Proyecto
+            </a>
+            {% endif %}
+        </div>
 
         <div class="proyectos-grid">
             {% for proyecto in proyectos %}

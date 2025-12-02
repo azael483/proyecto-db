@@ -276,19 +276,23 @@
             <div class="presupuesto-grid">
                 <div class="presupuesto-item">
                     <h4>Presupuesto Estimado</h4>
-                    <div class="valor">${{ "{:,.2f}".format(presupuesto[1] if presupuesto[1] else 0) }}</div>
+                    <div class="valor">${{ "{:,.2f}".format(presupuesto['Presupuesto_Original'] or 0) }}</div>
                 </div>
                 <div class="presupuesto-item">
                     <h4>Costo Actual</h4>
-                    <div class="valor">${{ "{:,.2f}".format(presupuesto[4] if presupuesto[4] else 0) }}</div>
+                    <div class="valor">${{ "{:,.2f}".format(presupuesto['Presupuesto_Total'] or 0) }}</div>
                 </div>
                 <div class="presupuesto-item">
                     <h4>Diferencia</h4>
-                    <div class="valor">${{ "{:,.2f}".format((presupuesto[1] if presupuesto[1] else 0) - (presupuesto[4] if presupuesto[4] else 0)) }}</div>
+                    <div class="valor">
+                        ${{ "{:,.2f}".format((presupuesto['Presupuesto_Original'] or 0) - (presupuesto['Presupuesto_Total'] or 0)) }}
+                    </div>
                 </div>
             </div>
             {% else %}
-            <p style="text-align: center; color: #666; padding: 20px;">No hay información de presupuesto disponible para este proyecto.</p>
+            <p style="text-align: center; color: #666; padding: 20px;">
+                No hay información de presupuesto disponible para este proyecto.
+            </p>
             {% endif %}
         </div>
 
